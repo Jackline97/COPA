@@ -1,3 +1,29 @@
+"""
+CSI 5138 Group Project
+
+
+pip install tensorflow-gpu=1.14.0     (You really need to run this model on GPU or TPU)
+pip install keras
+pip install bert-tensorflow
+pip install tensorflow-hub
+
+
+Create a ./tmp directory for the checkpoints to be saved in.  If you change the model architecture you will
+need to remove the existing checkpoints files.  Either delete thme or copy them else where.
+
+- I have been able to get 65% accuracy on the validation set using this model.
+
+- It uses BERT_base and it was trained on a GPU.  Training it on a CPU takes too long.
+
+- I tried the BERT_Large model be I ran out of memory.  I think we need to try it on Google Colab using TPU.
+There is a flag on line 213 to tell it to use TPU(s) or not.
+
+- There is also a version of BERT called ALBERT that we will want to investigate.  https://tfhub.dev/google/albert_xxlarge/2
+
+
+
+"""
+
 from sklearn.model_selection import train_test_split
 import pandas as pd
 import tensorflow as tf
@@ -46,7 +72,6 @@ with open("train.jsonl",'r') as f:
         else:
             train_data.append([(idx + '_1'), premise.lower(), answer_train_1.lower(), (choice == 0)])
             train_data.append([(idx + '_2'), premise.lower(), answer_train_2.lower(), (choice != 0)])
-
 training_df = pd.DataFrame(train_data, columns=['Id', 'sentence1', 'sentence2', 'label'])
 
 val_data = []
@@ -65,13 +90,12 @@ with open("val.jsonl",'r') as f:
         else:
             val_data.append([(idx + '_1'), premise.lower(), answer_train_1.lower(), (choice == 0)])
             val_data.append([(idx + '_2'), premise.lower(), answer_train_2.lower(), (choice != 0)])
-
 val_df = pd.DataFrame(val_data, columns=['Id', 'sentence1', 'sentence2', 'label'])
 
 
 
 # Set the output directory for saving model file
-OUTPUT_DIR = './tmp'#@param {type:"string"}
+OUTPUT_DIR = './tmp'
 
 
 DATA_COLUMN1 = 'sentence1'
@@ -234,9 +258,9 @@ def model_fn_builder(num_labels, learning_rate, num_train_steps,  num_warmup_ste
 
 # Compute train and warmup steps from batch size
 # These hyperparameters are copied from this colab notebook (https://colab.sandbox.google.com/github/tensorflow/tpu/blob/master/tools/colab/bert_finetuning_with_cloud_tpus.ipynb)
-BATCH_SIZE = 5 # 32
+BATCH_SIZE = 10 # 32
 LEARNING_RATE = 2e-5
-NUM_TRAIN_EPOCHS = 100.0
+NUM_TRAIN_EPOCHS = 10.0
 # Warmup is a period of time where hte learning rate
 # is small and gradually increases--usually helps training.
 WARMUP_PROPORTION = 0.1
@@ -253,31 +277,7 @@ run_config = tf.estimator.RunConfig(
     save_summary_steps=SAVE_SUMMARY_STEPS,
     save_checkpoints_steps=SAVE_CHECKPOINTS_STEPS)
 
-'''
-Batch = 5 epoch = 10
-{'auc': 0.6400001, 'eval_accuracy': 0.64, 'f1_score': 0.6666666, 'false_negatives': 32.0, 'false_positives': 40.0, 'loss': 1.8005009, 'precision': 0.6296296, 'recall': 0.68, 'true_negatives': 60.0, 'true_positives': 68.0, 'global_step': 1600}
 
-Batch = 10 epoch = 10
-{'auc': 0.65999997, 'eval_accuracy': 0.66, 'f1_score': 0.6666666, 'false_negatives': 42.0, 'false_positives': 26.0, 'loss': 1.6732528, 'precision': 0.6904762, 'recall': 0.58, 'true_negatives': 74.0, 'true_positives': 58.0, 'global_step': 800}
-
-Batch = 16 epoch 10
-{'auc': 0.65, 'eval_accuracy': 0.65, 'f1_score': 0.6666666, 'false_negatives': 43.0, 'false_positives': 27.0, 'loss': 1.6944106, 'precision': 0.6785714, 'recall': 0.57, 'true_negatives': 73.0, 'true_positives': 57.0, 'global_step': 800}
-
-Batch = 10 epoch = 20
-{'auc': 0.62, 'eval_accuracy': 0.62, 'f1_score': 0.6666666, 'false_negatives': 39.0, 'false_positives': 37.0, 'loss': 2.6343431, 'precision': 0.622449, 'recall': 0.61, 'true_negatives': 63.0, 'true_positives': 61.0, 'global_step': 1600}
-
-10   100
-{'auc': 0.60999995, 'eval_accuracy': 0.61, 'f1_score': 0.6666666, 'false_negatives': 41.0, 'false_positives': 37.0, 'loss': 3.6715355, 'precision': 0.6145833, 'recall': 0.59, 'true_negatives': 63.0, 'true_positives': 59.0, 'global_step': 8000}
-
-
-
-
-
-
-
-
-
-'''
 
 model_fn = model_fn_builder(
   num_labels=len(label_list),
@@ -314,6 +314,27 @@ val_results = estimator.evaluate(input_fn=test_input_fn, steps=None)
 print('Validation Results:')
 print(val_results)
 
+'''
+Batch = 5 epoch = 10
+{'auc': 0.6400001, 'eval_accuracy': 0.64, 'f1_score': 0.6666666, 'false_negatives': 32.0, 'false_positives': 40.0, 'loss': 1.8005009, 'precision': 0.6296296, 'recall': 0.68, 'true_negatives': 60.0, 'true_positives': 68.0, 'global_step': 1600}
+
+Batch = 10 epoch = 10
+{'auc': 0.65999997, 'eval_accuracy': 0.66, 'f1_score': 0.6666666, 'false_negatives': 42.0, 'false_positives': 26.0, 'loss': 1.6732528, 'precision': 0.6904762, 'recall': 0.58, 'true_negatives': 74.0, 'true_positives': 58.0, 'global_step': 800}
+
+Batch = 16 epoch 10
+{'auc': 0.65, 'eval_accuracy': 0.65, 'f1_score': 0.6666666, 'false_negatives': 43.0, 'false_positives': 27.0, 'loss': 1.6944106, 'precision': 0.6785714, 'recall': 0.57, 'true_negatives': 73.0, 'true_positives': 57.0, 'global_step': 800}
+
+Batch = 10 epoch = 20
+{'auc': 0.62, 'eval_accuracy': 0.62, 'f1_score': 0.6666666, 'false_negatives': 39.0, 'false_positives': 37.0, 'loss': 2.6343431, 'precision': 0.622449, 'recall': 0.61, 'true_negatives': 63.0, 'true_positives': 61.0, 'global_step': 1600}
+
+10   100
+{'auc': 0.60999995, 'eval_accuracy': 0.61, 'f1_score': 0.6666666, 'false_negatives': 41.0, 'false_positives': 37.0, 'loss': 3.6715355, 'precision': 0.6145833, 'recall': 0.59, 'true_negatives': 63.0, 'true_positives': 59.0, 'global_step': 8000}
+
+
+'''
+
+'''
+
 def getPrediction(in_sentences):
   labels = ["Negative", "Positive"]
   input_examples = [run_classifier.InputExample(guid="", text_a = x, text_b = None, label = 0) for x in in_sentences] # here, "" is just a dummy label
@@ -332,3 +353,5 @@ pred_sentences = [
 predictions = getPrediction(pred_sentences)
 
 predictions
+
+'''
