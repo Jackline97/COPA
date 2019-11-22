@@ -15,6 +15,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """BERT finetuning runner."""
+import os
+import tempfile
+import tarfile
+import shutil
+from file_utils import cached_path
 
 import pandas as pd
 import random
@@ -22,28 +27,16 @@ from tqdm import tqdm
 import json
 import numpy as np
 import torch
+from torch import nn
+from torch.nn import CrossEntropyLoss, MultiMarginLoss
+
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 
 from pytorch_pretrained_bert.tokenization import BertTokenizer
-from pytorch_pretrained_bert.modeling import BertForMultipleChoice, BertForMultipleChoiceMarginLoss
+from modeling import BertForMultipleChoice, BertForMultipleChoiceMarginLoss
+#from pytorch_pretrained_bert.modeling import BertForMultipleChoice, BertForMultipleChoiceMarginLoss
+
 from pytorch_pretrained_bert.optimization import BertAdam
-
-
-def _truncate_seq_pair(tokens_a, tokens_b, max_length):
-    """Truncates a sequence pair in place to the maximum length."""
-
-    # This is a simple heuristic which will always truncate the longer sequence
-    # one token at a time. This makes more sense than truncating an equal percent
-    # of tokens from each, since if one sequence is very short then each token
-    # that's truncated likely contains more information than a longer sequence.
-    while True:
-        total_length = len(tokens_a) + len(tokens_b)
-        if total_length <= max_length:
-            break
-        if len(tokens_a) > len(tokens_b):
-            tokens_a.pop()
-        else:
-            tokens_b.pop()
 
 
 
@@ -77,7 +70,6 @@ class CopaExample(object):
 
         return ", ".join(l)
 
-
 class InputFeatures(object):
     def __init__(self, example_id, choices_features, label):
         self.example_id = example_id
@@ -91,6 +83,23 @@ class InputFeatures(object):
             for tokens, input_ids, input_mask, segment_ids in choices_features
         ]
         self.label = label
+
+
+def _truncate_seq_pair(tokens_a, tokens_b, max_length):
+    """Truncates a sequence pair in place to the maximum length."""
+
+    # This is a simple heuristic which will always truncate the longer sequence
+    # one token at a time. This makes more sense than truncating an equal percent
+    # of tokens from each, since if one sequence is very short then each token
+    # that's truncated likely contains more information than a longer sequence.
+    while True:
+        total_length = len(tokens_a) + len(tokens_b)
+        if total_length <= max_length:
+            break
+        if len(tokens_a) > len(tokens_b):
+            tokens_a.pop()
+        else:
+            tokens_b.pop()
 
 def convert_examples_to_features(examples, tokenizer, max_seq_length,is_training):
     features = []
@@ -137,7 +146,6 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,is_training
 
     return features
 
-
 def convert_mnli_to_copa(entailment, neutral, contradiction):
     e_n = None
     e_c = None
@@ -167,7 +175,6 @@ def convert_mnli_to_copa(entailment, neutral, contradiction):
         skipped_count += 1
 
     return e_n, e_c, n_c
-
 
 def load_copa_data(path):
     examples = []
@@ -237,11 +244,9 @@ def load_copa_and_mnli_date(path, mnli_path, max_seq_length):
 
     return examples
 
-
 def accuracy(out, labels):
     outputs = np.argmax(out, axis=1)
     return np.sum(outputs == labels)
-
 
 def select_field(features, field):
     return [
@@ -251,8 +256,6 @@ def select_field(features, field):
         ]
         for feature in features
     ]
-
-
 
 def do_evaluation(model, eval_dataloader, is_training=False):
     if is_training:
@@ -293,10 +296,10 @@ def do_evaluation(model, eval_dataloader, is_training=False):
 
 
 def main(start_index=0, end_index=0):
-    use_mnli_in_training = True
-    num_train_epochs = 10
-    learning_rate = 3e-5
-    max_seq_length = 58
+    use_mnli_in_training = False
+    num_train_epochs = 30
+    learning_rate = 2e-5
+    max_seq_length = 50
     train_batch_size = 40
 
     warmup_proportion = 0.1
