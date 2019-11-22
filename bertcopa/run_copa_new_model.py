@@ -1,5 +1,5 @@
 # CSI 5138 Group Project
-#
+# superGLUE COPA Task
 #
 # Copyright 2018 The Google AI Language Team Authors and The HugginFace Inc. team.
 #
@@ -14,12 +14,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""BERT finetuning runner."""
-import os
-import tempfile
-import tarfile
-import shutil
-from file_utils import cached_path
+"""BERT COPA model runner."""
 
 import pandas as pd
 import random
@@ -33,9 +28,10 @@ from torch.nn import CrossEntropyLoss, MultiMarginLoss
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 
 from pytorch_pretrained_bert.tokenization import BertTokenizer
+from pytorch_pretrained_bert.optimization import BertAdam
+
 from modeling import BertForMultipleChoice
 
-from pytorch_pretrained_bert.optimization import BertAdam
 
 
 
@@ -257,10 +253,7 @@ def select_field(features, field):
     ]
 
 def do_evaluation(model, eval_dataloader, is_training=False):
-    if is_training:
-        eval_flag = 'train'
-    else:
-        eval_flag = 'eval'
+
     model.eval()
     eval_loss, eval_accuracy = 0, 0
     nb_eval_steps, nb_eval_examples = 0, 0
@@ -294,7 +287,7 @@ def do_evaluation(model, eval_dataloader, is_training=False):
 
 
 
-def main(start_index=0, end_index=0):
+def main():
     use_mnli_in_training = False
     num_train_epochs = 30
     learning_rate = 3e-5
