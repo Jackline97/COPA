@@ -33,8 +33,7 @@ from torch.nn import CrossEntropyLoss, MultiMarginLoss
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 
 from pytorch_pretrained_bert.tokenization import BertTokenizer
-from modeling import BertForMultipleChoice, BertForMultipleChoiceMarginLoss
-#from pytorch_pretrained_bert.modeling import BertForMultipleChoice, BertForMultipleChoiceMarginLoss
+from modeling import BertForMultipleChoice
 
 from pytorch_pretrained_bert.optimization import BertAdam
 
@@ -298,15 +297,15 @@ def do_evaluation(model, eval_dataloader, is_training=False):
 def main(start_index=0, end_index=0):
     use_mnli_in_training = False
     num_train_epochs = 30
-    learning_rate = 2e-5
+    learning_rate = 3e-5
     max_seq_length = 50
-    train_batch_size = 40
+    train_batch_size = 50
 
     warmup_proportion = 0.1
 
     seed = 1979
-    gradient_accumulation_steps = 1
-    margin = 0.37
+    gradient_accumulation_steps = 3
+    margin = .20# 0.37
     l2_reg = 0.02
     do_margin_loss = 1
 
@@ -326,7 +325,6 @@ def main(start_index=0, end_index=0):
 
     num_train_steps = int(len(train_examples) / train_batch_size / gradient_accumulation_steps * num_train_epochs)
 
-
     eval_examples = load_copa_data('./data/COPA/val.jsonl')
     test_examples = load_copa_data_from_csv('./data/COPA/test.csv')
 
@@ -336,7 +334,7 @@ def main(start_index=0, end_index=0):
     if do_margin_loss == 0:
         model = BertForMultipleChoice.from_pretrained("bert-base-uncased", num_choices=2)
     elif do_margin_loss == 1:
-        model = BertForMultipleChoiceMarginLoss.from_pretrained("bert-base-uncased", num_choices=2, margin=margin)
+        model = BertForMultipleChoice.from_pretrained("bert-base-uncased", num_choices=2, margin=margin)
 
     model.cuda()
 
