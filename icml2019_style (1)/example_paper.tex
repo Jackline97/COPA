@@ -130,11 +130,13 @@ The milestones below will show how we studied the COPA data and how we get the r
 Here's our initial thought on how to use Siamese Manhattan LSTM model.
 \begin{itemize}
     \item Instead of initializing the Siamese networks on our test data (500 questions combined with two answers for each) to directly calculate distance between query and answer, we decide to pre-train the Siamese Manhattan LSTM with SICK data which contains 9,927 sentence pairs with a $5,000/4,927$ training/test split ( Each pair is annotated with a relatedness $label \in [1, 5]$ corresponding to the average relatedness judged by 10 different individuals).
-    \item Then we would use our Siamese Manhattan LSTM trained from step 1 as our classifier to calculate the Manhattan distance between each query with their corresponding answer.
-    \item We would pre-process our data based on cause & effect model, which means we would combine question and answer according to the model as our new data format, then we compare the two options in one query: \\
+
+\item Then we would use our Siamese Manhattan LSTM trained from step 1 as our classifier to calculate the Manhattan distance between each query with their corresponding answer.
+
+\item We would pre-process our data based on cause \& effect model, which means we would combine question and answer according to the model as our new data format, then we compare the two options in one query:\\
      $If \ Condition = cause,data1 = query1 + answer1, data2 = query1 + answer 2$ \\
     $If \ Condition = effect, data1 = answer1 + query1, data2 = answer2 + query2$
-    \item The Loss can be conclude into three part $loss_{pretrained model}, 
+\item The Loss can be conclude into three part $loss_{pretrained model}, 
     loss_{SimilarityCalculation}$ and $loss_{Classification}$
 \end{itemize}
 
@@ -177,7 +179,7 @@ There are two steps to the BERT model: pre-training and ﬁne-tuning. During pre
     $$ COPA \ Alternative2 = neutral \ sentence $$
     $$   COPA \ Choice = Alternative2 $$
     
-    \item We will pre-process our data similar to how we would for the Siamese LSTM model, except this time we will add [CLS] to the start of the data field, and use [SEP] to separate the premise and the possible cause & effects. \\ 
+    \item We will pre-process our data similar to how we would for the Siamese LSTM model, except this time we will add [CLS] to the start of the data field, and use [SEP] to separate the premise and the possible cause \& effects. \\ 
     $$Condition = cause$$
     $$data1 = [CLS]query1 [SEP] answer1$$
     $$data2 = [CLS]query1 [SEP] answer 2$$
@@ -230,6 +232,7 @@ A2: post, office, expedited, letter. \\
 \textbf{Step 3:} Does the number of similar words $>=50 \%$?   \textbf{Yes}\\
 \textbf{Step 4:} Label 1 (Difficult)
 
+
 \begin{algorithm}[tb]
    \caption{Sentence selection}
    \label{alg:example}
@@ -239,16 +242,17 @@ A2: post, office, expedited, letter. \\
    \STATE Initialize $Label = [\ ]$.
    \FOR{$i=1$ {\bfseries to} $N-1$}
    \IF{$There\ are\ any\ pair\ words\ and\ Number\ of\ similar\ word>50 \% $}
-  \STATE $Label.append(1(Difficult))$
+  		\STATE $Label.append(1(Difficult))$
    \ELSIF{$There\ are\ any\ pair\ words\ and\ Number\ of\ similar\ word<=50 \% $}
-   \STATE $Label.append(0(Easy))$
+   		\STATE $Label.append(0(Easy))$
    \ELSIF{$There\ are\ not\ any\ pair\ words\ $}
-   \STATE $Label.append(1(Difficult))$
-   \ENDIF
+   		\STATE $Label.append(1(Difficult))$
    \ENDIF
    \ENDFOR
+   \UNTIL
 \end{algorithmic}
 \end{algorithm}
+
 \subsection{Model performance}
 After implementing data selection algorithm, we observe the model performance on each algorithm. 
 \begin{table}[t]
