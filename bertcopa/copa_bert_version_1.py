@@ -1,5 +1,17 @@
 """
+Introduction to Deep Learning and Reinforcement Learning
+U Ottawa
+
 CSI 5138 Group Project
+Fall 2019
+
+
+Group 6
+Li, Yansong
+Qu, Shuzheng
+Su, Xuanyu
+Yang, Siyuan
+Linkletter, Maurice
 
 
 pip install tensorflow-gpu=1.14.0     (You really need to run this model on GPU or TPU)
@@ -57,7 +69,7 @@ choice_test = [x-1 for x in choice_test]
 
 
 train_data = []
-with open("train.jsonl",'r') as f:
+with open("./data/COPA/train.jsonl",'r') as f:
     for line in f:
         train = json.loads(line)
         answer_train_1 = train.get('choice1')
@@ -75,7 +87,7 @@ with open("train.jsonl",'r') as f:
 training_df = pd.DataFrame(train_data, columns=['Id', 'sentence1', 'sentence2', 'label'])
 
 val_data = []
-with open("val.jsonl",'r') as f:
+with open("./data/COPA/val.jsonl",'r') as f:
     for line in f:
         train = json.loads(line)
         answer_train_1 = train.get('choice1')
@@ -314,44 +326,3 @@ val_results = estimator.evaluate(input_fn=test_input_fn, steps=None)
 print('Validation Results:')
 print(val_results)
 
-'''
-Batch = 5 epoch = 10
-{'auc': 0.6400001, 'eval_accuracy': 0.64, 'f1_score': 0.6666666, 'false_negatives': 32.0, 'false_positives': 40.0, 'loss': 1.8005009, 'precision': 0.6296296, 'recall': 0.68, 'true_negatives': 60.0, 'true_positives': 68.0, 'global_step': 1600}
-
-Batch = 10 epoch = 10
-{'auc': 0.65999997, 'eval_accuracy': 0.66, 'f1_score': 0.6666666, 'false_negatives': 42.0, 'false_positives': 26.0, 'loss': 1.6732528, 'precision': 0.6904762, 'recall': 0.58, 'true_negatives': 74.0, 'true_positives': 58.0, 'global_step': 800}
-
-Batch = 16 epoch 10
-{'auc': 0.65, 'eval_accuracy': 0.65, 'f1_score': 0.6666666, 'false_negatives': 43.0, 'false_positives': 27.0, 'loss': 1.6944106, 'precision': 0.6785714, 'recall': 0.57, 'true_negatives': 73.0, 'true_positives': 57.0, 'global_step': 800}
-
-Batch = 10 epoch = 20
-{'auc': 0.62, 'eval_accuracy': 0.62, 'f1_score': 0.6666666, 'false_negatives': 39.0, 'false_positives': 37.0, 'loss': 2.6343431, 'precision': 0.622449, 'recall': 0.61, 'true_negatives': 63.0, 'true_positives': 61.0, 'global_step': 1600}
-
-10   100
-{'auc': 0.60999995, 'eval_accuracy': 0.61, 'f1_score': 0.6666666, 'false_negatives': 41.0, 'false_positives': 37.0, 'loss': 3.6715355, 'precision': 0.6145833, 'recall': 0.59, 'true_negatives': 63.0, 'true_positives': 59.0, 'global_step': 8000}
-
-
-'''
-
-'''
-
-def getPrediction(in_sentences):
-  labels = ["Negative", "Positive"]
-  input_examples = [run_classifier.InputExample(guid="", text_a = x, text_b = None, label = 0) for x in in_sentences] # here, "" is just a dummy label
-  input_features = run_classifier.convert_examples_to_features(input_examples, label_list, MAX_SEQ_LENGTH, tokenizer)
-  predict_input_fn = run_classifier.input_fn_builder(features=input_features, seq_length=MAX_SEQ_LENGTH, is_training=False, drop_remainder=False)
-  predictions = estimator.predict(predict_input_fn)
-  return [(sentence, prediction['probabilities'], labels[prediction['labels']]) for sentence, prediction in zip(in_sentences, predictions)]
-
-pred_sentences = [
-  "That movie was absolutely awful",
-  "The acting was a bit lacking",
-  "The film was creative and surprising",
-  "Absolutely fantastic!"
-]
-
-predictions = getPrediction(pred_sentences)
-
-predictions
-
-'''

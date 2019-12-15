@@ -1,5 +1,19 @@
-# CSI 5138 Group Project
+# CSI 5138 Group ProjectIntroduction to Deep Learning and Reinforcement Learning
+# U Ottawa
 #
+# CSI 5138 Group Project
+# Fall 2019
+#
+#
+# Group 6
+# Li, Yansong
+# Qu, Shuzheng
+# Su, Xuanyu
+# Yang, Siyuan
+# Linkletter, Maurice
+#
+#
+# superGLUE COPA Task
 #
 # Copyright 2018 The Google AI Language Team Authors and The HugginFace Inc. team.
 #
@@ -14,7 +28,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""BERT finetuning runner."""
+"""BERT COPA model runner."""
+from os import path
 
 import pandas as pd
 import random
@@ -22,32 +37,18 @@ from tqdm import tqdm
 import json
 import numpy as np
 import torch
+
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 
 from pytorch_pretrained_bert.tokenization import BertTokenizer
-from pytorch_pretrained_bert.modeling import BertForMultipleChoice, BertForMultipleChoiceMarginLoss
 from pytorch_pretrained_bert.optimization import BertAdam
 
-
-def _truncate_seq_pair(tokens_a, tokens_b, max_length):
-    """Truncates a sequence pair in place to the maximum length."""
-
-    # This is a simple heuristic which will always truncate the longer sequence
-    # one token at a time. This makes more sense than truncating an equal percent
-    # of tokens from each, since if one sequence is very short then each token
-    # that's truncated likely contains more information than a longer sequence.
-    while True:
-        total_length = len(tokens_a) + len(tokens_b)
-        if total_length <= max_length:
-            break
-        if len(tokens_a) > len(tokens_b):
-            tokens_a.pop()
-        else:
-            tokens_b.pop()
+from modeling import BertForMultipleChoice
 
 
 
-class CopaExample(object):
+
+class CopaRecord(object):
     # A single copa data item
 
     def __init__(self, example_id, example_type, example_premise, example_hypothesis_1, example_hypothesis_2, example_label=None):
@@ -77,7 +78,6 @@ class CopaExample(object):
 
         return ", ".join(l)
 
-
 class InputFeatures(object):
     def __init__(self, example_id, choices_features, label):
         self.example_id = example_id
@@ -91,6 +91,23 @@ class InputFeatures(object):
             for tokens, input_ids, input_mask, segment_ids in choices_features
         ]
         self.label = label
+
+
+def _truncate_seq_pair(tokens_a, tokens_b, max_length):
+    """Truncates a sequence pair in place to the maximum length."""
+
+    # This is a simple heuristic which will always truncate the longer sequence
+    # one token at a time. This makes more sense than truncating an equal percent
+    # of tokens from each, since if one sequence is very short then each token
+    # that's truncated likely contains more information than a longer sequence.
+    while True:
+        total_length = len(tokens_a) + len(tokens_b)
+        if total_length <= max_length:
+            break
+        if len(tokens_a) > len(tokens_b):
+            tokens_a.pop()
+        else:
+            tokens_b.pop()
 
 def convert_examples_to_features(examples, tokenizer, max_seq_length,is_training):
     features = []
@@ -137,7 +154,6 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,is_training
 
     return features
 
-
 def convert_mnli_to_copa(entailment, neutral, contradiction):
     e_n = None
     e_c = None
@@ -150,7 +166,7 @@ def convert_mnli_to_copa(entailment, neutral, contradiction):
 
         n_pairId = str(neutral.pairID.item())
         n_sentence2 = str(neutral.sentence2.item())
-        e_n = CopaExample((e_pairId + '_' + n_pairId), 'effect', e_sentence1.lower(), e_sentence2.lower(), n_sentence2.lower(), 0)
+        e_n = CopaRecord((e_pairId + '_' + n_pairId), 'effect', e_sentence1.lower(), e_sentence2.lower(), n_sentence2.lower(), 0)
     except:
         skipped_count += 1
 
@@ -160,17 +176,16 @@ def convert_mnli_to_copa(entailment, neutral, contradiction):
         c_pairId = str(contradiction.pairID.item())
         c_sentence2 = str(contradiction.sentence2.item())
 
-        e_c = CopaExample((e_pairId + '_' + c_pairId), 'effect', e_sentence1.lower(), c_sentence2.lower(), e_sentence2.lower(), 1)
-        n_c = CopaExample((n_pairId + '_' + c_pairId), 'effect', e_sentence1.lower(), n_sentence2.lower(), c_sentence2.lower(), 0)
+        e_c = CopaRecord((e_pairId + '_' + c_pairId), 'effect', e_sentence1.lower(), c_sentence2.lower(), e_sentence2.lower(), 1)
+        n_c = CopaRecord((n_pairId + '_' + c_pairId), 'effect', e_sentence1.lower(), n_sentence2.lower(), c_sentence2.lower(), 0)
 
     except:
         skipped_count += 1
 
     return e_n, e_c, n_c
 
-
 def load_copa_data(path):
-    examples = []
+    records = []
     with open(path, 'r') as f:
         for line in f:
             train = json.loads(line)
@@ -181,14 +196,14 @@ def load_copa_data(path):
             choice = train.get('label')
             idx = str(train.get('idx'))
 
-            examples.append(
-                CopaExample(idx, q_type, premise, answer_train_1, answer_train_2, choice)
+            records.append(
+                CopaRecord(idx, q_type, premise, answer_train_1, answer_train_2, choice)
             )
 
-    return examples
+    return records
 
 def load_copa_data_from_csv(path):
-    examples = []
+    records = []
     data = pd.read_csv(path, sep=',')
 
     for row in data.itertuples(index=True, name='Pandas'):
@@ -200,15 +215,14 @@ def load_copa_data_from_csv(path):
         choice = row[6]
 
 
-        examples.append(
-                CopaExample(idx, q_type, premise, answer_train_1, answer_train_2, choice)
+        records.append(
+                CopaRecord(idx, q_type, premise, answer_train_1, answer_train_2, choice)
             )
 
-    return examples
+    return records
 
-def load_copa_and_mnli_date(path, mnli_path, max_seq_length):
-    examples = load_copa_data(path)
-
+def load_mnli_data(mnli_path, max_seq_length):
+    records = []
     mnli = pd.read_table(mnli_path, sep='\t', header=0)
     done = {}
 
@@ -225,23 +239,21 @@ def load_copa_and_mnli_date(path, mnli_path, max_seq_length):
         (entail_neutral, entail_contradiction, neutral_contradiction) = convert_mnli_to_copa(entailment_row, neutral_row, contradiction_row)
 
         if entail_neutral is not None:
-            examples.append(entail_neutral)
+            records.append(entail_neutral)
 
         if entail_contradiction is not None:
-            examples.append(entail_contradiction)
+            records.append(entail_contradiction)
 
         if neutral_contradiction is not None: 
-            examples.append(neutral_contradiction)
+            records.append(neutral_contradiction)
 
         done[prompt_id] = prompt_id
 
-    return examples
-
+    return records
 
 def accuracy(out, labels):
     outputs = np.argmax(out, axis=1)
     return np.sum(outputs == labels)
-
 
 def select_field(features, field):
     return [
@@ -252,13 +264,8 @@ def select_field(features, field):
         for feature in features
     ]
 
-
-
 def do_evaluation(model, eval_dataloader, is_training=False):
-    if is_training:
-        eval_flag = 'train'
-    else:
-        eval_flag = 'eval'
+
     model.eval()
     eval_loss, eval_accuracy = 0, 0
     nb_eval_steps, nb_eval_examples = 0, 0
@@ -288,24 +295,33 @@ def do_evaluation(model, eval_dataloader, is_training=False):
     eval_accuracy = eval_accuracy / nb_eval_examples
 
     model.zero_grad()
-    return logits_all, eval_accuracy
+    return logits_all, eval_accuracy, eval_loss
 
 
 
-def main(start_index=0, end_index=0):
-    use_mnli_in_training = True
+def main():
+    checkpoint_path = './checkpoint/bert_copa.pt'
+
+    train_with_mnli = False
+    train_with_copa = True
+
+    load_checkpoint_if_exists = True
+    save_checkpoint = True
+
+    #use_mnli_in_training = False
     num_train_epochs = 10
     learning_rate = 3e-5
-    max_seq_length = 58
-    train_batch_size = 40
+    max_seq_length = 50
+    train_batch_size = 50
 
     warmup_proportion = 0.1
 
     seed = 1979
     gradient_accumulation_steps = 1
-    margin = 0.37
     l2_reg = 0.02
-    do_margin_loss = 1
+
+    use_margin_loss = True
+    margin = .20# 0.37
 
     train_batch_size = int(train_batch_size / gradient_accumulation_steps)
     eval_batch_size = train_batch_size
@@ -316,13 +332,18 @@ def main(start_index=0, end_index=0):
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
 
-    if use_mnli_in_training:
-        train_examples = load_copa_and_mnli_date('./data/COPA/train.jsonl', './data/MNLI/dev_matched.tsv', max_seq_length)
-    else:
-        train_examples = load_copa_data('./data/COPA/train.jsonl')
+    train_examples = []
+
+    if train_with_mnli:
+        mnli = load_mnli_data('./data/MNLI/dev_matched.tsv', max_seq_length)
+        train_examples.extend(mnli)
+
+    if train_with_copa:
+        copa = load_copa_data('./data/COPA/train.jsonl')
+        train_examples.extend(copa)
+
 
     num_train_steps = int(len(train_examples) / train_batch_size / gradient_accumulation_steps * num_train_epochs)
-
 
     eval_examples = load_copa_data('./data/COPA/val.jsonl')
     test_examples = load_copa_data_from_csv('./data/COPA/test.csv')
@@ -330,10 +351,17 @@ def main(start_index=0, end_index=0):
     # Prepare model
     tokenizer = BertTokenizer.from_pretrained("bert-base-uncased", do_lower_case=True)
 
-    if do_margin_loss == 0:
+    if use_margin_loss:
+        model = BertForMultipleChoice.from_pretrained("bert-base-uncased", num_choices=2, margin=margin)
+    else:
         model = BertForMultipleChoice.from_pretrained("bert-base-uncased", num_choices=2)
-    elif do_margin_loss == 1:
-        model = BertForMultipleChoiceMarginLoss.from_pretrained("bert-base-uncased", num_choices=2, margin=margin)
+
+    if load_checkpoint_if_exists and path.exists(checkpoint_path):
+        print(f'Loading existing checkpoint: {checkpoint_path} ')
+        device = torch.device("cuda")
+        model.load_state_dict(torch.load(checkpoint_path))
+        model.to(device)
+
 
     model.cuda()
 
@@ -415,13 +443,22 @@ def main(start_index=0, end_index=0):
                 model.zero_grad()
                 global_step += 1
 
-        logits_all, eval_accuracy = do_evaluation(model, eval_dataloader, is_training=False)
-        tqdm.write(f'\nEvaluation Accuracy: {eval_accuracy}\n')
+        logits_all, train_accuracy, train_loss = do_evaluation(model, train_dataloader, is_training=False)
+        tqdm.write(f'Training Accuracy: {train_accuracy}')
+        tqdm.write(f'Training Loss: {train_loss}')
+
+        logits_all, eval_accuracy, eval_loss = do_evaluation(model, eval_dataloader, is_training=False)
+        tqdm.write(f'Evaluation Accuracy: {eval_accuracy}')
+        tqdm.write(f'Evaluation Loss: {eval_loss}')
+
         eval_acc_list.append(eval_accuracy)
 
+    if save_checkpoint:
+        torch.save(model.state_dict(), checkpoint_path)
 
-    logits_all, best_test_acc = do_evaluation(model, test_dataloader, is_training=False)
-    print(f'Testing Accuracy: {best_test_acc}')
+    logits_all, test_acc, test_loss = do_evaluation(model, test_dataloader, is_training=False)
+    print(f'Testing Accuracy: {test_acc}')
+    print(f'Testing Loss: {test_loss}')
 
 
 
