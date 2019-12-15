@@ -37,9 +37,9 @@ import torch
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 
 from pytorch_pretrained_bert.tokenization import BertTokenizer
-from pytorch_pretrained_bert.modeling import BertForMultipleChoice, BertForMultipleChoiceMarginLoss
 from pytorch_pretrained_bert.optimization import BertAdam
 
+from modeling import BertForMultipleChoice
 
 def _truncate_seq_pair(tokens_a, tokens_b, max_length):
     """Truncates a sequence pair in place to the maximum length."""
@@ -305,7 +305,7 @@ def do_evaluation(model, eval_dataloader, is_training=False):
 
 
 def main(start_index=0, end_index=0):
-    num_train_epochs = 10
+    num_train_epochs = 3
     learning_rate = 3e-5
     max_seq_length = 58
     train_batch_size = 40
@@ -338,10 +338,10 @@ def main(start_index=0, end_index=0):
     # Prepare model
     tokenizer = BertTokenizer.from_pretrained("bert-base-uncased", do_lower_case=True)
 
-    if do_margin_loss == 0:
+    if do_margin_loss:
+        model = BertForMultipleChoice.from_pretrained("bert-base-uncased", num_choices=2, margin=margin)
+    else:
         model = BertForMultipleChoice.from_pretrained("bert-base-uncased", num_choices=2)
-    elif do_margin_loss == 1:
-        model = BertForMultipleChoiceMarginLoss.from_pretrained("bert-base-uncased", num_choices=2, margin=margin)
 
     model.cuda()
 

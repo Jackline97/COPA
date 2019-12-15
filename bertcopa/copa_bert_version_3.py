@@ -308,8 +308,7 @@ def main():
     load_checkpoint_if_exists = True
     save_checkpoint = True
 
-    #use_mnli_in_training = False
-    num_train_epochs = 10
+    num_train_epochs = 3
     learning_rate = 3e-5
     max_seq_length = 50
     train_batch_size = 50

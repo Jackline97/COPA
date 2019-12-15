@@ -52,19 +52,7 @@ import os
 import re
 
 import json
-from xml import etree
-import numpy as np
-import xml.etree.ElementTree as ET
 import pandas as pd
-tree = ET.parse('copa-test.xml')
-root = tree.getroot()
-
-choice_test = []
-for child in root.findall('item'):
-    answer = int(child.get('most-plausible-alternative'))
-    choice_test.append(answer)
-choice_test = [x-1 for x in choice_test]
-# question, answer, choice, type
 
 
 
